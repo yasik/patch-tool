@@ -15,7 +15,13 @@ class MatchResult:
     used_fuzzy: bool  # True if fuzzy normalization was needed
 
 
-def fuzzy_find(haystack: str, needle: str) -> MatchResult:
+def fuzzy_find(
+    haystack: str,
+    needle: str,
+    *,
+    fuzzy_haystack: str | None = None,
+    fuzzy_needle: str | None = None,
+) -> MatchResult:
     """Find ``needle`` in ``haystack``.
 
     First tries exact ``str.find``. If that misses, both inputs are
@@ -27,16 +33,27 @@ def fuzzy_find(haystack: str, needle: str) -> MatchResult:
     if idx != -1:
         return MatchResult(True, idx, len(needle), used_fuzzy=False)
 
-    fuzzy_haystack = normalize_for_fuzzy_match(haystack)
-    fuzzy_needle = normalize_for_fuzzy_match(needle)
-    idx = fuzzy_haystack.find(fuzzy_needle)
+    fuzzy_haystack_value = (
+        normalize_for_fuzzy_match(haystack)
+        if fuzzy_haystack is None
+        else fuzzy_haystack
+    )
+    fuzzy_needle_value = (
+        normalize_for_fuzzy_match(needle) if fuzzy_needle is None else fuzzy_needle
+    )
+    idx = fuzzy_haystack_value.find(fuzzy_needle_value)
     if idx == -1:
         return MatchResult(False, -1, 0, used_fuzzy=False)
-    return MatchResult(True, idx, len(fuzzy_needle), used_fuzzy=True)
+    return MatchResult(True, idx, len(fuzzy_needle_value), used_fuzzy=True)
 
 
 def occurrence_positions(
-    haystack: str, needle: str, *, use_fuzzy: bool = False
+    haystack: str,
+    needle: str,
+    *,
+    use_fuzzy: bool = False,
+    fuzzy_haystack: str | None = None,
+    fuzzy_needle: str | None = None,
 ) -> list[int]:
     """Return every start position for ``needle`` in ``haystack``.
 
@@ -45,8 +62,14 @@ def occurrence_positions(
     fuzzy-normalized haystack.
     """
     if use_fuzzy:
-        haystack = normalize_for_fuzzy_match(haystack)
-        needle = normalize_for_fuzzy_match(needle)
+        haystack = (
+            normalize_for_fuzzy_match(haystack)
+            if fuzzy_haystack is None
+            else fuzzy_haystack
+        )
+        needle = (
+            normalize_for_fuzzy_match(needle) if fuzzy_needle is None else fuzzy_needle
+        )
     if not needle:
         return []
 
@@ -60,6 +83,21 @@ def occurrence_positions(
         start = index + 1
 
 
-def count_occurrences(haystack: str, needle: str, *, use_fuzzy: bool = False) -> int:
+def count_occurrences(
+    haystack: str,
+    needle: str,
+    *,
+    use_fuzzy: bool = False,
+    fuzzy_haystack: str | None = None,
+    fuzzy_needle: str | None = None,
+) -> int:
     """Count all occurrences of ``needle`` in ``haystack``."""
-    return len(occurrence_positions(haystack, needle, use_fuzzy=use_fuzzy))
+    return len(
+        occurrence_positions(
+            haystack,
+            needle,
+            use_fuzzy=use_fuzzy,
+            fuzzy_haystack=fuzzy_haystack,
+            fuzzy_needle=fuzzy_needle,
+        )
+    )

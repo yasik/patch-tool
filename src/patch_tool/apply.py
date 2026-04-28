@@ -171,6 +171,8 @@ def _apply_in_memory(
     normalized = [
         Edit(old=normalize_to_lf(e.old), new=normalize_to_lf(e.new)) for e in edits
     ]
+    fuzzy_base = normalize_for_fuzzy_match(base_content)
+    fuzzy_old_texts = [normalize_for_fuzzy_match(e.old) for e in normalized]
 
     for i, e in enumerate(normalized):
         if e.old == "":
@@ -190,9 +192,15 @@ def _apply_in_memory(
             )
 
     # Probe — if any single edit needs fuzzy matching, the whole file goes fuzzy.
-    probes = [fuzzy_find(base_content, e.old) for e in normalized]
+    probes = [
+        fuzzy_find(
+            base_content, e.old, fuzzy_haystack=fuzzy_base, fuzzy_needle=fuzzy_old
+        )
+        for e, fuzzy_old in zip(normalized, fuzzy_old_texts, strict=True)
+    ]
     used_fuzzy = any(p.used_fuzzy for p in probes)
-    diff_base = normalize_for_fuzzy_match(base_content) if used_fuzzy else base_content
+    diff_base = fuzzy_base if used_fuzzy else base_content
+    fuzzy_diff_base = fuzzy_base if used_fuzzy else normalize_for_fuzzy_match(diff_base)
 
     if used_fuzzy and not allow_no_changes:
         for i, e in enumerate(normalized):
@@ -208,7 +216,13 @@ def _apply_in_memory(
     # Re-find every edit against ``diff_base`` and assert uniqueness.
     matches: list[tuple[int, int, int, str]] = []  # (edit_index, start, length, new)
     for i, e in enumerate(normalized):
-        m = fuzzy_find(diff_base, e.old)
+        fuzzy_old = fuzzy_old_texts[i]
+        m = fuzzy_find(
+            diff_base,
+            e.old,
+            fuzzy_haystack=fuzzy_diff_base,
+            fuzzy_needle=fuzzy_old,
+        )
         if not m.found:
             label = "the text" if len(normalized) == 1 else f"edits[{i}]"
             raise TextNotFoundError(
@@ -220,7 +234,13 @@ def _apply_in_memory(
                 edit_index=i,
                 old=e.old,
             )
-        positions = occurrence_positions(diff_base, e.old, use_fuzzy=m.used_fuzzy)
+        positions = occurrence_positions(
+            diff_base,
+            e.old,
+            use_fuzzy=m.used_fuzzy,
+            fuzzy_haystack=fuzzy_diff_base,
+            fuzzy_needle=fuzzy_old,
+        )
         n = len(positions)
         if n > 1:
             label = "the text" if len(normalized) == 1 else f"edits[{i}]"

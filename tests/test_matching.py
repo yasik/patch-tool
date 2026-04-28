@@ -37,6 +37,17 @@ class TestFuzzyFind:
         assert m.found
         assert m.used_fuzzy is True
 
+    def test_accepts_precomputed_fuzzy_values(self):
+        m = fuzzy_find(
+            "unrelated",
+            "needle",
+            fuzzy_haystack="prefix needle suffix",
+            fuzzy_needle="needle",
+        )
+        assert m.found
+        assert m.index == 7
+        assert m.used_fuzzy is True
+
     def test_exact_preferred_over_fuzzy(self):
         # When exact would match, fuzzy is not even considered.
         m = fuzzy_find("foo bar", "bar")
@@ -72,3 +83,12 @@ class TestCountOccurrences:
 class TestOccurrencePositions:
     def test_returns_overlapping_positions(self):
         assert occurrence_positions("aaaa", "aa") == [0, 1, 2]
+
+    def test_accepts_precomputed_fuzzy_values(self):
+        assert occurrence_positions(
+            "unrelated",
+            "needle",
+            use_fuzzy=True,
+            fuzzy_haystack="needle needle",
+            fuzzy_needle="needle",
+        ) == [0, 7]
