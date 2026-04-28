@@ -3,7 +3,20 @@ name = "patch-tool"
 version = "0.1.0"
 description = "Robust search/replace file editing for LLM-driven code changes"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [
+    { name = "Peter Steinberger" },
+]
+keywords = ["llm", "patch", "search-replace", "code-editing", "agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
 dependencies = []
 
 [project.optional-dependencies]

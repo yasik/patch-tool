@@ -17,14 +17,12 @@ Algorithm (mirrors pi-mono / Aider semantics):
 10. Restore line endings, prepend the BOM, atomically write to disk.
 """
 
-from __future__ import annotations
-
 import os
 import stat
 import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TypeAlias, cast
+from typing import cast
 
 from ._diff import generate_diff
 from ._file_lock import file_mutation_lock
@@ -45,7 +43,7 @@ from .errors import (
     TextNotFoundError,
 )
 
-EditLike: TypeAlias = Edit | tuple[object, ...] | Mapping[str, object]
+type EditLike = Edit | tuple[object, ...] | Mapping[str, object]
 
 
 def _coerce_edit(value: object, index: int) -> Edit:

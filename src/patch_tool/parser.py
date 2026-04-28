@@ -20,8 +20,6 @@ We refuse to escape markers inside the SEARCH/REPLACE bodies — if your code
 genuinely contains those strings, use the structured ``Edit`` API instead.
 """
 
-from __future__ import annotations
-
 import re
 
 from ._types import Edit

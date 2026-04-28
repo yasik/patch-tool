@@ -1,7 +1,5 @@
 """Exact-then-fuzzy text matching."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 from ._normalization import normalize_for_fuzzy_match

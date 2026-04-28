@@ -10,8 +10,6 @@ The default lock is in-process only. Callers can opt into an advisory
 cross-process ``fcntl.flock`` lock when they need process-level coordination.
 """
 
-from __future__ import annotations
-
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager

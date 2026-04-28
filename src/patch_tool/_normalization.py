@@ -14,8 +14,6 @@ That is intentional — mixing exact and fuzzy regions in the same file is
 hard to reason about and produces surprising diffs.
 """
 
-from __future__ import annotations
-
 import re
 import unicodedata
 

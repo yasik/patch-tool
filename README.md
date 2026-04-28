@@ -51,7 +51,7 @@ uv add patch-tool
 pip install patch-tool
 ```
 
-Requires Python 3.10+.
+Requires Python 3.12+.
 
 ---
 

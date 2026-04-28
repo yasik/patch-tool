@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from patch_tool import Edit, ParseError, parse_aider_blocks, parse_blocks

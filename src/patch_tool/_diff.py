@@ -12,8 +12,6 @@ Designed for terminal display. Not a valid ``patch(1)`` input — use ``difflib`
 if you need that. The point here is human (and LLM) readable change summaries.
 """
 
-from __future__ import annotations
-
 import difflib
 
 DEFAULT_CONTEXT_LINES = 4

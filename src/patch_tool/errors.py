@@ -5,8 +5,6 @@ Filesystem errors (missing file, permission denied) propagate as standard
 exceptions for *edit-semantic* failures.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 
