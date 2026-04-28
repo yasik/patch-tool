@@ -376,10 +376,10 @@ src/patch_tool/
 ├── _types.py            # Edit, EditResult dataclasses
 ├── _file_lock.py        # per-file threading.Lock
 ├── apply.py             # core algorithm + atomic write
-├── diff.py              # unified diff with line numbers
+├── _diff.py             # unified diff with line numbers
 ├── errors.py            # typed exceptions
-├── matching.py          # exact + fuzzy text search
-├── normalization.py     # BOM, line endings, fuzzy normalization
+├── _matching.py         # exact + fuzzy text search
+├── _normalization.py    # BOM, line endings, fuzzy normalization
 └── parser.py            # SEARCH/REPLACE block parser
 
 tests/

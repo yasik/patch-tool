@@ -1,4 +1,4 @@
-from patch_tool.matching import count_occurrences, fuzzy_find, occurrence_positions
+from patch_tool._matching import count_occurrences, fuzzy_find, occurrence_positions
 
 
 class TestFuzzyFind:

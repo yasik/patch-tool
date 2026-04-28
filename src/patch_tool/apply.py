@@ -26,23 +26,23 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Union
 
+from ._diff import generate_diff
 from ._file_lock import file_mutation_lock
+from ._matching import fuzzy_find, occurrence_positions
+from ._normalization import (
+    detect_line_ending,
+    normalize_for_fuzzy_match,
+    normalize_to_lf,
+    restore_line_endings,
+    strip_bom,
+)
 from ._types import Edit, EditResult
-from .diff import generate_diff
 from .errors import (
     AmbiguousMatchError,
     EmptyOldTextError,
     NoChangesError,
     OverlappingEditsError,
     TextNotFoundError,
-)
-from .matching import fuzzy_find, occurrence_positions
-from .normalization import (
-    detect_line_ending,
-    normalize_for_fuzzy_match,
-    normalize_to_lf,
-    restore_line_endings,
-    strip_bom,
 )
 
 EditLike = Union[Edit, tuple[str, str], Mapping[str, str]]

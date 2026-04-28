@@ -1,4 +1,4 @@
-from patch_tool.normalization import (
+from patch_tool._normalization import (
     BOM,
     detect_line_ending,
     normalize_for_fuzzy_match,

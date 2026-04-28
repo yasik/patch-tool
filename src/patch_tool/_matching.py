@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .normalization import normalize_for_fuzzy_match
+from ._normalization import normalize_for_fuzzy_match
 
 
 @dataclass(frozen=True, slots=True)

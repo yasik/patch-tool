@@ -1,4 +1,4 @@
-from patch_tool.diff import generate_diff
+from patch_tool._diff import generate_diff
 
 
 def test_no_changes():
