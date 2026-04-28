@@ -31,6 +31,7 @@ _SEARCH_RE = re.compile(r"^<{7}\s*SEARCH\s*$")
 _DIVIDER_RE = re.compile(r"^={7}\s*$")
 _REPLACE_RE = re.compile(r"^>{7}\s*REPLACE\s*$")
 _FENCE_RE = re.compile(r"^\s*```")
+_PROSE_TERMINAL_PUNCTUATION = ":.,"
 
 
 def _strip_trailing_eol(text: str) -> str:
@@ -123,5 +124,13 @@ def _scan_back_for_path(lines: list[str], block_start: int) -> str | None:
         # A path candidate. Reject obvious non-paths.
         if _SEARCH_RE.match(candidate) or _DIVIDER_RE.match(candidate):
             return None
+        if not _is_path_candidate(candidate):
+            return None
         return candidate
     return None
+
+
+def _is_path_candidate(candidate: str) -> bool:
+    if any(char.isspace() for char in candidate):
+        return False
+    return not candidate.endswith(tuple(_PROSE_TERMINAL_PUNCTUATION))

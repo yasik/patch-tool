@@ -127,6 +127,9 @@ The grammar is:
 
 - The path line precedes each block. Markdown fences (` ``` `, ` ```python `)
   and blank lines between path and block are tolerated.
+- Path lines must not contain whitespace and must not end with prose
+  punctuation (`:`, `.`, or `,`). This avoids treating explanatory text as a
+  filename.
 - Multiple blocks targeting the same path are grouped.
 - Trailing whitespace on marker lines is ignored.
 - The markers are exactly seven `<`, `=`, or `>` characters — same as Aider.

@@ -180,6 +180,24 @@ class TestParseAiderBlocks:
         with pytest.raises(ParseError, match="no preceding file path"):
             parse_aider_blocks(text)
 
+    def test_prose_before_block_is_not_treated_as_path(self):
+        text = (
+            "Here are the edits I'm making:\n"
+            "<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
+        )
+        with pytest.raises(ParseError, match="no preceding file path"):
+            parse_aider_blocks(text)
+
+    def test_path_with_internal_whitespace_is_rejected(self):
+        text = "src/my file.py\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
+        with pytest.raises(ParseError, match="no preceding file path"):
+            parse_aider_blocks(text)
+
+    def test_path_ending_with_prose_punctuation_is_rejected(self):
+        text = "src/foo.py:\n<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
+        with pytest.raises(ParseError, match="no preceding file path"):
+            parse_aider_blocks(text)
+
     def test_path_not_reused_across_blocks(self):
         # Second block has no path before it. Should fail.
         text = (
