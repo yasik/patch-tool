@@ -35,14 +35,31 @@ def fuzzy_find(haystack: str, needle: str) -> MatchResult:
     return MatchResult(True, idx, len(fuzzy_needle), used_fuzzy=True)
 
 
-def count_occurrences(haystack: str, needle: str) -> int:
-    """Count occurrences of ``needle`` in ``haystack`` in fuzzy space.
+def occurrence_positions(
+    haystack: str, needle: str, *, use_fuzzy: bool = False
+) -> list[int]:
+    """Return every start position for ``needle`` in ``haystack``.
 
-    We always count in fuzzy space because *any* successful match (exact or
-    fuzzy) implies the canonical identity is the fuzzy form.
+    Overlapping occurrences are counted. When ``use_fuzzy`` is true, both
+    inputs are normalized before scanning and the returned offsets refer to the
+    fuzzy-normalized haystack.
     """
-    fuzzy_haystack = normalize_for_fuzzy_match(haystack)
-    fuzzy_needle = normalize_for_fuzzy_match(needle)
-    if not fuzzy_needle:
-        return 0
-    return fuzzy_haystack.count(fuzzy_needle)
+    if use_fuzzy:
+        haystack = normalize_for_fuzzy_match(haystack)
+        needle = normalize_for_fuzzy_match(needle)
+    if not needle:
+        return []
+
+    positions: list[int] = []
+    start = 0
+    while True:
+        index = haystack.find(needle, start)
+        if index == -1:
+            return positions
+        positions.append(index)
+        start = index + 1
+
+
+def count_occurrences(haystack: str, needle: str, *, use_fuzzy: bool = False) -> int:
+    """Count all occurrences of ``needle`` in ``haystack``."""
+    return len(occurrence_positions(haystack, needle, use_fuzzy=use_fuzzy))

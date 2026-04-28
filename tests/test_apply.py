@@ -113,6 +113,26 @@ class TestErrors:
             apply_edits(path, [Edit("foo", "FOO")])
         assert exc.value.occurrences == 3
 
+    def test_overlapping_occurrences_are_ambiguous(self, tmp_file):
+        path = tmp_file("a.txt", "aaa\n")
+        with pytest.raises(AmbiguousMatchError) as exc:
+            apply_edits(path, [Edit("aa", "X")])
+        assert exc.value.occurrences == 2
+
+    def test_exact_unique_match_ignores_fuzzy_equivalent_occurrences(self, tmp_file):
+        path = tmp_file("a.txt", 'print(\u201chello\u201d)\nprint("hello")\n')
+        result = apply_edits(path, [Edit('print("hello")', 'print("HELLO")')])
+        assert result.used_fuzzy_match is False
+        assert path.read_text(encoding="utf-8") == (
+            'print(\u201chello\u201d)\nprint("HELLO")\n'
+        )
+
+    def test_fuzzy_equivalent_occurrences_are_ambiguous_for_fuzzy_match(self, tmp_file):
+        path = tmp_file("a.txt", "print(\u201chello\u201d)\nprint(\u201ehello\u201f)\n")
+        with pytest.raises(AmbiguousMatchError) as exc:
+            apply_edits(path, [Edit('print("hello")', 'print("HELLO")')])
+        assert exc.value.occurrences == 2
+
     def test_no_changes(self, tmp_file):
         path = tmp_file("a.txt", "stuff\n")
         with pytest.raises(NoChangesError):

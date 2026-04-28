@@ -148,7 +148,7 @@ def _apply_in_memory(
                 f"Could not find {label} in {path_hint}. The old text must "
                 "match exactly including all whitespace and newlines."
             )
-        n = count_occurrences(diff_base, e.old)
+        n = count_occurrences(diff_base, e.old, use_fuzzy=m.used_fuzzy)
         if n > 1:
             label = "the text" if len(normalized) == 1 else f"edits[{i}]"
             raise AmbiguousMatchError(

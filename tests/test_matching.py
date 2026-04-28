@@ -1,4 +1,4 @@
-from patch_tool.matching import count_occurrences, fuzzy_find
+from patch_tool.matching import count_occurrences, fuzzy_find, occurrence_positions
 
 
 class TestFuzzyFind:
@@ -50,13 +50,25 @@ class TestCountOccurrences:
     def test_multiple(self):
         assert count_occurrences("foo foo foo", "foo") == 3
 
+    def test_overlapping(self):
+        assert count_occurrences("aaa", "aa") == 2
+
     def test_zero(self):
         assert count_occurrences("abc", "xyz") == 0
 
-    def test_counted_in_fuzzy_space(self):
+    def test_exact_count_does_not_include_fuzzy_equivalents(self):
+        haystack = "it\u2019s and it's"
+        assert count_occurrences(haystack, "it's") == 1
+
+    def test_counted_in_fuzzy_space_when_requested(self):
         # Two occurrences that look different but are equivalent fuzzy.
         haystack = "it\u2019s and it's"
-        assert count_occurrences(haystack, "it's") == 2
+        assert count_occurrences(haystack, "it's", use_fuzzy=True) == 2
 
     def test_empty_needle(self):
         assert count_occurrences("anything", "") == 0
+
+
+class TestOccurrencePositions:
+    def test_returns_overlapping_positions(self):
+        assert occurrence_positions("aaaa", "aa") == [0, 1, 2]
