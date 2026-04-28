@@ -24,7 +24,7 @@ import stat
 import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 from ._diff import generate_diff
 from ._file_lock import file_mutation_lock
@@ -48,22 +48,24 @@ from .errors import (
 EditLike: TypeAlias = Edit | tuple[object, ...] | Mapping[str, object]
 
 
-def _coerce_edit(value: EditLike, index: int) -> Edit:
+def _coerce_edit(value: object, index: int) -> Edit:
     if isinstance(value, Edit):
         return value
     if isinstance(value, tuple):
-        if len(value) != 2:
+        tuple_value = cast(tuple[object, ...], value)
+        if len(tuple_value) != 2:
             raise TypeError(
-                f"edits[{index}]: tuple must be (old, new), got length {len(value)}"
+                f"edits[{index}]: tuple must be (old, new), got length {len(tuple_value)}"
             )
-        old, new = value
+        old, new = tuple_value
         if not isinstance(old, str) or not isinstance(new, str):
             raise TypeError(f"edits[{index}]: tuple items must be str")
         return Edit(old=old, new=new)
     if isinstance(value, Mapping):
+        mapping_value = cast(Mapping[str, object], value)
         try:
-            old = value["old"]
-            new = value["new"]
+            old = mapping_value["old"]
+            new = mapping_value["new"]
         except KeyError as exc:
             raise TypeError(
                 f"edits[{index}]: mapping must have 'old' and 'new' keys"

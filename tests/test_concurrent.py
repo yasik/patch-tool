@@ -14,14 +14,17 @@ from pathlib import Path
 import pytest
 
 from patch_tool import Edit, apply_edits
+from patch_tool._diff import DEFAULT_CONTEXT_LINES, generate_diff
+from patch_tool._types import EditResult
+from tests._types import TmpFileFactory
 
 
-def test_same_file_sequential_no_lost_updates(tmp_file):
+def test_same_file_sequential_no_lost_updates(tmp_file: TmpFileFactory):
     """N threads each apply one unique edit to the same file. All should succeed."""
     # Zero-pad so no name is a substring of another (line_01 vs line_010).
     path = tmp_file("a.txt", "\n".join(f"line_{i:02d}" for i in range(50)) + "\n")
 
-    def worker(i: int):
+    def worker(i: int) -> EditResult:
         return apply_edits(path, [Edit(f"line_{i:02d}", f"DONE_{i:02d}")])
 
     with ThreadPoolExecutor(max_workers=8) as pool:
@@ -35,7 +38,9 @@ def test_same_file_sequential_no_lost_updates(tmp_file):
         assert f"line_{i:02d}" not in final
 
 
-def test_different_files_run_in_parallel(tmp_file):
+def test_different_files_run_in_parallel(
+    tmp_file: TmpFileFactory, monkeypatch: pytest.MonkeyPatch
+):
     """Two threads on two different files should not block each other.
 
     We use a barrier inside a hooked operation: each thread, while holding
@@ -47,33 +52,23 @@ def test_different_files_run_in_parallel(tmp_file):
 
     barrier = threading.Barrier(parties=2, timeout=2.0)
 
-    # We need a way to make each apply pause inside the locked section.
-    # Easiest: monkey-patch generate_diff to wait on the barrier on first call.
-    from patch_tool import apply as apply_module
-
-    real_generate_diff = apply_module.generate_diff
-    call_count = {"n": 0}
-    lock = threading.Lock()
-
-    def hooked_generate_diff(*args, **kwargs):
-        with lock:
-            call_count["n"] += 1
+    def hooked_generate_diff(
+        old: str, new: str, *, context_lines: int = DEFAULT_CONTEXT_LINES
+    ) -> tuple[str, int | None]:
         # Both threads should reach this point without deadlocking.
         try:
             barrier.wait()
         except threading.BrokenBarrierError:
             pytest.fail("Different-file edits did not run in parallel")
-        return real_generate_diff(*args, **kwargs)
+        return generate_diff(old, new, context_lines=context_lines)
 
-    apply_module.generate_diff = hooked_generate_diff
-    try:
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            f_a = pool.submit(apply_edits, path_a, [Edit("x", "A")])
-            f_b = pool.submit(apply_edits, path_b, [Edit("x", "B")])
-            f_a.result(timeout=5)
-            f_b.result(timeout=5)
-    finally:
-        apply_module.generate_diff = real_generate_diff
+    monkeypatch.setattr("patch_tool.apply.generate_diff", hooked_generate_diff)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f_a = pool.submit(apply_edits, path_a, [Edit("x", "A")])
+        f_b = pool.submit(apply_edits, path_b, [Edit("x", "B")])
+        f_a.result(timeout=5)
+        f_b.result(timeout=5)
 
     assert path_a.read_bytes() == b"A\n"
     assert path_b.read_bytes() == b"B\n"
@@ -91,7 +86,7 @@ def test_symlinked_paths_share_lock(tmp_path: Path):
     link = tmp_path / "link.txt"
     link.symlink_to(real)
 
-    def worker(i: int):
+    def worker(i: int) -> EditResult:
         target = real if i % 2 == 0 else link
         return apply_edits(target, [Edit(f"row_{i:02d}", f"OK_{i:02d}")])
 
@@ -103,7 +98,7 @@ def test_symlinked_paths_share_lock(tmp_path: Path):
         assert f"OK_{i:02d}" in final
 
 
-def test_cross_process_lock_disabled_by_default(tmp_file):
+def test_cross_process_lock_disabled_by_default(tmp_file: TmpFileFactory):
     path = tmp_file("a.txt", "x\n")
 
     apply_edits(path, [Edit("x", "y")])
@@ -111,7 +106,7 @@ def test_cross_process_lock_disabled_by_default(tmp_file):
     assert not (path.parent / ".a.txt.lock").exists()
 
 
-def test_cross_process_lock_uses_sibling_lock_file(tmp_file):
+def test_cross_process_lock_uses_sibling_lock_file(tmp_file: TmpFileFactory):
     pytest.importorskip("fcntl")
     path = tmp_file("a.txt", "x\n")
 

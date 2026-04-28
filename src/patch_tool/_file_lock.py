@@ -20,10 +20,13 @@ from typing import Protocol
 
 
 class _FcntlModule(Protocol):
-    LOCK_EX: int
-    LOCK_UN: int
+    @property
+    def LOCK_EX(self) -> int: ...
 
-    def flock(self, fd: int, operation: int) -> object: ...
+    @property
+    def LOCK_UN(self) -> int: ...
+
+    def flock(self, fd: int, operation: int, /) -> None: ...
 
 
 _fcntl: _FcntlModule | None

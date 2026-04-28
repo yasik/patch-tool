@@ -1,10 +1,13 @@
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
 
+from tests._types import ReadBytes, TmpFileFactory
 
-@pytest.fixture
-def tmp_file(tmp_path: Path):
+
+@pytest.fixture(name="tmp_file")
+def fixture_tmp_file(tmp_path: Path) -> TmpFileFactory:
     """Factory that writes a file under tmp_path and returns its Path."""
 
     def _make(name: str, content: str, *, encoding: str = "utf-8") -> Path:
@@ -17,8 +20,8 @@ def tmp_file(tmp_path: Path):
     return _make
 
 
-@pytest.fixture
-def read_bytes():
+@pytest.fixture(name="read_bytes")
+def fixture_read_bytes() -> ReadBytes:
     def _read(path: Path) -> bytes:
         return path.read_bytes()
 
@@ -26,7 +29,7 @@ def read_bytes():
 
 
 @pytest.fixture(autouse=True)
-def _ensure_no_lingering_locks():
+def fixture_ensure_no_lingering_locks() -> Generator[None, None, None]:
     """Sanity check: file locks are in-process, but ensure no orphan state."""
     yield
     # Module-level lock map is fine to leave populated; locks themselves
