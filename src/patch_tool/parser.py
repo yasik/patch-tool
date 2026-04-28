@@ -34,7 +34,8 @@ _FENCE_RE = re.compile(r"^\s*```")
 
 
 def _strip_trailing_eol(text: str) -> str:
-    return text[:-1] if text.endswith("\n") else text
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return normalized[:-1] if normalized.endswith("\n") else normalized
 
 
 def parse_blocks(text: str) -> list[Edit]:

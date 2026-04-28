@@ -74,6 +74,19 @@ class TestParseBlocks:
         edits = parse_blocks(text)
         assert edits == [Edit("old", "new")]
 
+    def test_crlf_block_body_is_normalized_to_lf(self):
+        text = (
+            "<<<<<<< SEARCH\r\n"
+            "old line 1\r\n"
+            "old line 2\r\n"
+            "=======\r\n"
+            "new line 1\r\n"
+            "new line 2\r\n"
+            ">>>>>>> REPLACE\r\n"
+        )
+        edits = parse_blocks(text)
+        assert edits == [Edit("old line 1\nold line 2", "new line 1\nnew line 2")]
+
     def test_paths_ignored_in_bare_parser(self):
         text = (
             "src/foo.py\n"
@@ -146,6 +159,18 @@ class TestParseAiderBlocks:
             "```python\n"
             "<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
             "```\n"
+        )
+        result = parse_aider_blocks(text)
+        assert result == {"src/foo.py": [Edit("old", "new")]}
+
+    def test_crlf_aider_block_body_is_normalized_to_lf(self):
+        text = (
+            "src/foo.py\r\n"
+            "<<<<<<< SEARCH\r\n"
+            "old\r\n"
+            "=======\r\n"
+            "new\r\n"
+            ">>>>>>> REPLACE\r\n"
         )
         result = parse_aider_blocks(text)
         assert result == {"src/foo.py": [Edit("old", "new")]}
