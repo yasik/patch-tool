@@ -13,14 +13,24 @@ cross-process ``fcntl.flock`` lock when they need process-level coordination.
 from __future__ import annotations
 
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Protocol
 
+
+class _FcntlModule(Protocol):
+    LOCK_EX: int
+    LOCK_UN: int
+
+    def flock(self, fd: int, operation: int) -> object: ...
+
+
+_fcntl: _FcntlModule | None
 try:
-    import fcntl
+    import fcntl as _fcntl
 except ImportError:
-    fcntl = None
+    _fcntl = None
 
 _locks: dict[str, threading.Lock] = {}
 _locks_guard = threading.Lock()
@@ -38,21 +48,23 @@ def _lock_file_path(path: Path) -> Path:
 
 
 @contextmanager
-def _cross_process_lock(path: Path) -> Iterator[None]:
-    if fcntl is None:
+def _cross_process_lock(path: Path) -> Generator[None, None, None]:
+    if _fcntl is None:
         raise RuntimeError("cross_process_lock requires fcntl support")
 
     lock_path = _lock_file_path(path)
     with open(lock_path, "a", encoding="utf-8") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        _fcntl.flock(lock_file.fileno(), _fcntl.LOCK_EX)
         try:
             yield
         finally:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            _fcntl.flock(lock_file.fileno(), _fcntl.LOCK_UN)
 
 
 @contextmanager
-def file_mutation_lock(path: Path, *, cross_process: bool = False) -> Iterator[None]:
+def file_mutation_lock(
+    path: Path, *, cross_process: bool = False
+) -> Generator[None, None, None]:
     """Acquire the per-file lock for the duration of the block."""
     key = _key(path)
     with _locks_guard:

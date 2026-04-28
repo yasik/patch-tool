@@ -32,16 +32,16 @@ _SPECIAL_SPACES = re.compile(r"[\u00A0\u2002-\u200A\u202F\u205F\u3000]")
 
 
 def strip_bom(text: str) -> tuple[str, str]:
-    """Return ``(bom, body)``. ``bom`` is ``"\\ufeff"`` or ``""``."""
+    """Return the optional UTF-8 BOM and the remaining body text."""
     if text.startswith(BOM):
         return BOM, text[1:]
     return "", text
 
 
 def detect_line_ending(text: str) -> str:
-    """Return ``"\\r\\n"`` if CRLF appears before a bare LF, else ``"\\n"``.
+    """Return CRLF if it appears before a bare LF, else LF.
 
-    Files with no newlines default to ``"\\n"``.
+    Files with no newlines default to LF.
     """
     crlf = text.find("\r\n")
     lf = text.find("\n")

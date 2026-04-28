@@ -36,7 +36,7 @@ def test_deletion():
 
 def test_context_lines_truncated():
     # Two changes far apart should show ... between.
-    old_lines = ["line {}".format(i) for i in range(1, 21)]
+    old_lines = [f"line {i}" for i in range(1, 21)]
     new_lines = old_lines.copy()
     new_lines[1] = "EDITED 2"
     new_lines[18] = "EDITED 19"

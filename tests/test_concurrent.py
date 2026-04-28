@@ -7,10 +7,7 @@ They verify that:
 * Two threads editing *different* files run independently (do not block).
 """
 
-from __future__ import annotations
-
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 

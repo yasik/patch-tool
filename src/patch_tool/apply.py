@@ -24,7 +24,7 @@ import stat
 import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Union
+from typing import TypeAlias
 
 from ._diff import generate_diff
 from ._file_lock import file_mutation_lock
@@ -45,7 +45,7 @@ from .errors import (
     TextNotFoundError,
 )
 
-EditLike = Union[Edit, tuple[str, str], Mapping[str, str]]
+EditLike: TypeAlias = Edit | tuple[object, ...] | Mapping[str, object]
 
 
 def _coerce_edit(value: EditLike, index: int) -> Edit:
@@ -262,7 +262,7 @@ def _apply_in_memory(
 
     # Overlap detection.
     matches.sort(key=lambda t: t[1])
-    for prev, curr in zip(matches, matches[1:]):
+    for prev, curr in zip(matches, matches[1:], strict=False):
         prev_idx, prev_start, prev_len, _ = prev
         curr_idx, curr_start, _, _ = curr
         if prev_start + prev_len > curr_start:

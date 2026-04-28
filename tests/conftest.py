@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import os
 from pathlib import Path
 
 import pytest
@@ -8,12 +5,7 @@ import pytest
 
 @pytest.fixture
 def tmp_file(tmp_path: Path):
-    """Factory: write a file under tmp_path and return its Path.
-
-    Usage::
-
-        path = tmp_file("greet.txt", "hello\\nworld\\n")
-    """
+    """Factory that writes a file under tmp_path and returns its Path."""
 
     def _make(name: str, content: str, *, encoding: str = "utf-8") -> Path:
         path = tmp_path / name
