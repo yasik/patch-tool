@@ -138,8 +138,22 @@ def _fsync_directory(path: Path) -> None:
         os.close(fd)
 
 
+def _is_noop_edit(edit: Edit, *, use_fuzzy: bool) -> bool:
+    if edit.old == edit.new:
+        return True
+    if use_fuzzy:
+        return normalize_for_fuzzy_match(edit.old) == normalize_for_fuzzy_match(
+            edit.new
+        )
+    return False
+
+
 def _apply_in_memory(
-    base_content: str, edits: Sequence[Edit], path_hint: str
+    base_content: str,
+    edits: Sequence[Edit],
+    path_hint: str,
+    *,
+    allow_no_changes: bool = False,
 ) -> tuple[str, str, bool, int]:
     """Match and apply ``edits`` against ``base_content`` (LF-normalized).
 
@@ -161,11 +175,26 @@ def _apply_in_memory(
         if e.old == "":
             label = "old" if len(normalized) == 1 else f"edits[{i}].old"
             raise EmptyOldTextError(f"{label} must not be empty in {path_hint}")
+        if not allow_no_changes and _is_noop_edit(e, use_fuzzy=False):
+            label = "old and new" if len(normalized) == 1 else f"edits[{i}]"
+            raise NoChangesError(
+                f"{label} are identical in {path_hint}. Replacement edits "
+                "must change the matched text."
+            )
 
     # Probe — if any single edit needs fuzzy matching, the whole file goes fuzzy.
     probes = [fuzzy_find(base_content, e.old) for e in normalized]
     used_fuzzy = any(p.used_fuzzy for p in probes)
     diff_base = normalize_for_fuzzy_match(base_content) if used_fuzzy else base_content
+
+    if used_fuzzy and not allow_no_changes:
+        for i, e in enumerate(normalized):
+            if _is_noop_edit(e, use_fuzzy=True):
+                label = "old and new" if len(normalized) == 1 else f"edits[{i}]"
+                raise NoChangesError(
+                    f"{label} are equivalent after fuzzy normalization in "
+                    f"{path_hint}. Replacement edits must change the matched text."
+                )
 
     # Re-find every edit against ``diff_base`` and assert uniqueness.
     matches: list[tuple[int, int, int, str]] = []  # (edit_index, start, length, new)
@@ -187,6 +216,11 @@ def _apply_in_memory(
             )
         matches.append((i, m.index, m.length, e.new))
 
+    if allow_no_changes and all(
+        _is_noop_edit(e, use_fuzzy=used_fuzzy) for e in normalized
+    ):
+        return diff_base, diff_base, used_fuzzy, 0
+
     # Overlap detection.
     matches.sort(key=lambda t: t[1])
     for prev, curr in zip(matches, matches[1:]):
@@ -204,6 +238,8 @@ def _apply_in_memory(
         new_content = new_content[:start] + new + new_content[start + length :]
 
     if new_content == diff_base:
+        if allow_no_changes:
+            return diff_base, new_content, used_fuzzy, 0
         raise NoChangesError(
             f"No changes made to {path_hint}. The replacements produced "
             "identical content."
@@ -257,7 +293,7 @@ def apply_edits(
         lf_body = normalize_to_lf(body)
 
         diff_base, new_lf, used_fuzzy, applied = _apply_in_memory(
-            lf_body, coerced, str(target)
+            lf_body, coerced, str(target), allow_no_changes=dry_run
         )
 
         diff_text, first_changed = generate_diff(diff_base, new_lf)

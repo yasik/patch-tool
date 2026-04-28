@@ -141,6 +141,21 @@ class TestErrors:
         with pytest.raises(NoChangesError):
             apply_edits(path, [Edit("stuff", "stuff")])
 
+    def test_noop_edit_in_multi_edit_write_rejected(self, tmp_file):
+        path = tmp_file("a.txt", "alpha\nbeta\n")
+        with pytest.raises(NoChangesError, match=r"edits\[0\]"):
+            apply_edits(
+                path,
+                [Edit("alpha", "alpha"), Edit("beta", "BETA")],
+            )
+        assert path.read_bytes() == b"alpha\nbeta\n"
+
+    def test_fuzzy_equivalent_noop_write_rejected(self, tmp_file):
+        path = tmp_file("a.txt", "before\u2014after\n")
+        with pytest.raises(NoChangesError, match="fuzzy normalization"):
+            apply_edits(path, [Edit("before-after", "before\u2014after")])
+        assert path.read_text(encoding="utf-8") == "before\u2014after\n"
+
     def test_file_not_found(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             apply_edits(tmp_path / "missing.txt", [Edit("a", "b")])
@@ -291,6 +306,27 @@ class TestDryRun:
         result = preview_edits(path, [Edit("x", "y")])
         assert result.written is False
         assert read_bytes(path) == b"x\n"
+
+    def test_dry_run_no_changes_returns_no_change_result(self, tmp_file, read_bytes):
+        path = tmp_file("a.txt", "same\n")
+        result = apply_edits(path, [Edit("same", "same")], dry_run=True)
+        assert result.diff == ""
+        assert result.first_changed_line is None
+        assert result.edits_applied == 0
+        assert result.written is False
+        assert read_bytes(path) == b"same\n"
+
+    def test_dry_run_fuzzy_equivalent_noop_returns_no_change_result(self, tmp_file):
+        path = tmp_file("a.txt", "before\u2014after\n")
+        result = apply_edits(
+            path,
+            [Edit("before-after", "before\u2014after")],
+            dry_run=True,
+        )
+        assert result.used_fuzzy_match is True
+        assert result.diff == ""
+        assert result.first_changed_line is None
+        assert result.edits_applied == 0
 
 
 class TestAtomicWrite:

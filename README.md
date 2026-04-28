@@ -147,6 +147,8 @@ matches and the file is rewritten atomically, or nothing changes.
 - `path` — file to edit (str or PathLike). Must exist.
 - `edits` — sequence of `Edit`, `(old, new)` tuples, or `{"old", "new"}` dicts.
 - `dry_run` — if `True`, computes the diff without writing.
+  No-change dry-runs return `diff=""`, `first_changed_line=None`,
+  `edits_applied=0`, and `written=False` instead of raising.
 - `encoding` — text encoding. Default `"utf-8"`.
 
 **Returns** `EditResult` with:
@@ -165,7 +167,8 @@ matches and the file is rewritten atomically, or nothing changes.
 - `TextNotFoundError` — `old` is not in the file.
 - `AmbiguousMatchError` — `old` matches more than once. Carries `.occurrences`.
 - `OverlappingEditsError` — two edits target overlapping regions.
-- `NoChangesError` — the result equals the original.
+- `NoChangesError` — a write would not change the file, or an individual
+  write edit has identical `old` and `new` text.
 
 ### `preview_edits(path, edits, *, encoding="utf-8") -> EditResult`
 
