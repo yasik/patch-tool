@@ -13,6 +13,9 @@ from patch_tool import (
     NoChangesError,
     OverlappingEditsError,
     TextNotFoundError,
+)
+from patch_tool import apply as apply_module
+from patch_tool import (
     apply_edits,
     preview_edits,
 )
@@ -303,6 +306,34 @@ class TestAtomicWrite:
         apply_edits(path, [Edit("hello", "world")])
         mode = stat.S_IMODE(path.stat().st_mode)
         assert mode == 0o640
+
+    def test_temp_file_removed_when_replace_fails(self, tmp_file, monkeypatch):
+        path = tmp_file("a.txt", "hello\n")
+
+        def fail_replace(src, dst):
+            raise OSError("replace failed")
+
+        monkeypatch.setattr(apply_module.os, "replace", fail_replace)
+
+        with pytest.raises(OSError, match="replace failed"):
+            apply_edits(path, [Edit("hello", "world")])
+
+        assert path.read_bytes() == b"hello\n"
+        assert list(path.parent.iterdir()) == [path]
+
+    def test_parent_directory_fsynced_after_replace(self, tmp_file, monkeypatch):
+        path = tmp_file("a.txt", "hello\n")
+
+        synced = []
+
+        def record_fsync_directory(parent):
+            synced.append(parent)
+
+        monkeypatch.setattr(apply_module, "_fsync_directory", record_fsync_directory)
+
+        apply_edits(path, [Edit("hello", "world")])
+
+        assert synced == [path.parent]
 
     def test_replaces_in_place(self, tmp_file):
         path = tmp_file("a.txt", "old\n")

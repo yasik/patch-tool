@@ -20,8 +20,8 @@ Algorithm (mirrors pi-mono / Aider semantics):
 from __future__ import annotations
 
 import os
-import secrets
 import stat
+import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Union
@@ -91,22 +91,51 @@ def _atomic_write(path: Path, content: str, encoding: str) -> None:
     except FileNotFoundError:
         existing_mode = None
 
-    tmp_name = f".{path.name}.tmp.{os.getpid()}.{secrets.token_hex(4)}"
-    tmp = parent / tmp_name
+    tmp_prefix = f".{path.name}.tmp.{os.getpid()}."
+    tmp_fd, tmp_name = tempfile.mkstemp(prefix=tmp_prefix, dir=parent)
+    tmp = Path(tmp_name)
     try:
-        with open(tmp, "w", encoding=encoding, newline="") as fh:
+        if existing_mode is not None:
+            try:
+                os.fchmod(tmp_fd, existing_mode)
+            except AttributeError:
+                os.chmod(tmp, existing_mode)
+
+        with os.fdopen(tmp_fd, "w", encoding=encoding, newline="") as fh:
+            tmp_fd = -1
             fh.write(content)
             fh.flush()
             os.fsync(fh.fileno())
-        if existing_mode is not None:
-            os.chmod(tmp, existing_mode)
         os.replace(tmp, path)
+        _fsync_directory(parent)
     except BaseException:
+        if tmp_fd != -1:
+            try:
+                os.close(tmp_fd)
+            except OSError:
+                pass
         try:
             tmp.unlink()
         except FileNotFoundError:
             pass
         raise
+
+
+def _fsync_directory(path: Path) -> None:
+    """Best-effort fsync for the directory entry created by ``os.replace``."""
+    if os.name == "nt":
+        return
+
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    except OSError:
+        pass
+    finally:
+        os.close(fd)
 
 
 def _apply_in_memory(
