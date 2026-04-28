@@ -75,11 +75,14 @@ class TestMultipleEdits:
 
     def test_overlapping_edits_rejected(self, tmp_file):
         path = tmp_file("a.txt", "foobar\n")
-        with pytest.raises(OverlappingEditsError):
+        with pytest.raises(OverlappingEditsError) as exc:
             apply_edits(
                 path,
                 [Edit("foob", "X"), Edit("ooba", "Y")],
             )
+        assert exc.value.path == path.resolve()
+        assert exc.value.edit_index == 0
+        assert exc.value.other_edit_index == 1
 
     def test_adjacent_non_overlapping_ok(self, tmp_file):
         path = tmp_file("a.txt", "abcdef\n")
@@ -102,25 +105,35 @@ class TestMultipleEdits:
 class TestErrors:
     def test_empty_old_rejected(self, tmp_file):
         path = tmp_file("a.txt", "stuff\n")
-        with pytest.raises(EmptyOldTextError):
+        with pytest.raises(EmptyOldTextError) as exc:
             apply_edits(path, [Edit("", "x")])
+        assert exc.value.path == path.resolve()
+        assert exc.value.edit_index == 0
 
     def test_text_not_found(self, tmp_file):
         path = tmp_file("a.txt", "stuff\n")
-        with pytest.raises(TextNotFoundError, match="Could not find"):
+        with pytest.raises(TextNotFoundError, match="structural whitespace") as exc:
             apply_edits(path, [Edit("missing", "x")])
+        assert exc.value.path == path.resolve()
+        assert exc.value.edit_index == 0
+        assert exc.value.old == "missing"
 
     def test_ambiguous_match(self, tmp_file):
         path = tmp_file("a.txt", "foo foo foo\n")
         with pytest.raises(AmbiguousMatchError) as exc:
             apply_edits(path, [Edit("foo", "FOO")])
         assert exc.value.occurrences == 3
+        assert exc.value.positions == [0, 4, 8]
+        assert exc.value.path == path.resolve()
+        assert exc.value.edit_index == 0
+        assert exc.value.old == "foo"
 
     def test_overlapping_occurrences_are_ambiguous(self, tmp_file):
         path = tmp_file("a.txt", "aaa\n")
         with pytest.raises(AmbiguousMatchError) as exc:
             apply_edits(path, [Edit("aa", "X")])
         assert exc.value.occurrences == 2
+        assert exc.value.positions == [0, 1]
 
     def test_exact_unique_match_ignores_fuzzy_equivalent_occurrences(self, tmp_file):
         path = tmp_file("a.txt", 'print(\u201chello\u201d)\nprint("hello")\n')
@@ -138,8 +151,10 @@ class TestErrors:
 
     def test_no_changes(self, tmp_file):
         path = tmp_file("a.txt", "stuff\n")
-        with pytest.raises(NoChangesError):
+        with pytest.raises(NoChangesError) as exc:
             apply_edits(path, [Edit("stuff", "stuff")])
+        assert exc.value.path == path.resolve()
+        assert exc.value.edit_index == 0
 
     def test_noop_edit_in_multi_edit_write_rejected(self, tmp_file):
         path = tmp_file("a.txt", "alpha\nbeta\n")

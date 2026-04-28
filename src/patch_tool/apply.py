@@ -36,7 +36,7 @@ from .errors import (
     OverlappingEditsError,
     TextNotFoundError,
 )
-from .matching import count_occurrences, fuzzy_find
+from .matching import fuzzy_find, occurrence_positions
 from .normalization import (
     detect_line_ending,
     normalize_for_fuzzy_match,
@@ -164,6 +164,7 @@ def _apply_in_memory(
     """
     if not edits:
         raise ValueError("edits must contain at least one entry")
+    path_for_error = Path(path_hint)
 
     # All edit text gets normalized to LF too — the LLM might emit \r\n
     # in either oldText or newText.
@@ -174,12 +175,18 @@ def _apply_in_memory(
     for i, e in enumerate(normalized):
         if e.old == "":
             label = "old" if len(normalized) == 1 else f"edits[{i}].old"
-            raise EmptyOldTextError(f"{label} must not be empty in {path_hint}")
+            raise EmptyOldTextError(
+                f"{label} must not be empty in {path_hint}",
+                path=path_for_error,
+                edit_index=i,
+            )
         if not allow_no_changes and _is_noop_edit(e, use_fuzzy=False):
             label = "old and new" if len(normalized) == 1 else f"edits[{i}]"
             raise NoChangesError(
                 f"{label} are identical in {path_hint}. Replacement edits "
-                "must change the matched text."
+                "must change the matched text.",
+                path=path_for_error,
+                edit_index=i,
             )
 
     # Probe — if any single edit needs fuzzy matching, the whole file goes fuzzy.
@@ -193,7 +200,9 @@ def _apply_in_memory(
                 label = "old and new" if len(normalized) == 1 else f"edits[{i}]"
                 raise NoChangesError(
                     f"{label} are equivalent after fuzzy normalization in "
-                    f"{path_hint}. Replacement edits must change the matched text."
+                    f"{path_hint}. Replacement edits must change the matched text.",
+                    path=path_for_error,
+                    edit_index=i,
                 )
 
     # Re-find every edit against ``diff_base`` and assert uniqueness.
@@ -203,16 +212,26 @@ def _apply_in_memory(
         if not m.found:
             label = "the text" if len(normalized) == 1 else f"edits[{i}]"
             raise TextNotFoundError(
-                f"Could not find {label} in {path_hint}. The old text must "
-                "match exactly including all whitespace and newlines."
+                f"Could not find {label} in {path_hint}. The text must match "
+                "the file exactly; smart quotes, exotic dashes, NBSP, and "
+                "trailing whitespace are auto-normalized, but structural "
+                "whitespace and newlines must match.",
+                path=path_for_error,
+                edit_index=i,
+                old=e.old,
             )
-        n = count_occurrences(diff_base, e.old, use_fuzzy=m.used_fuzzy)
+        positions = occurrence_positions(diff_base, e.old, use_fuzzy=m.used_fuzzy)
+        n = len(positions)
         if n > 1:
             label = "the text" if len(normalized) == 1 else f"edits[{i}]"
             raise AmbiguousMatchError(
                 f"Found {n} occurrences of {label} in {path_hint}. "
                 "Each old text must be unique. Add more context to disambiguate.",
                 occurrences=n,
+                positions=positions,
+                path=path_for_error,
+                edit_index=i,
+                old=e.old,
             )
         matches.append((i, m.index, m.length, e.new))
 
@@ -229,7 +248,10 @@ def _apply_in_memory(
         if prev_start + prev_len > curr_start:
             raise OverlappingEditsError(
                 f"edits[{prev_idx}] and edits[{curr_idx}] overlap in {path_hint}. "
-                "Merge them into one edit or target disjoint regions."
+                "Merge them into one edit or target disjoint regions.",
+                path=path_for_error,
+                edit_index=prev_idx,
+                other_edit_index=curr_idx,
             )
 
     # Apply in reverse so earlier indices stay valid.
@@ -242,7 +264,8 @@ def _apply_in_memory(
             return diff_base, new_content, used_fuzzy, 0
         raise NoChangesError(
             f"No changes made to {path_hint}. The replacements produced "
-            "identical content."
+            "identical content.",
+            path=path_for_error,
         )
 
     return diff_base, new_content, used_fuzzy, len(normalized)

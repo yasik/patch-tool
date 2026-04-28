@@ -56,13 +56,15 @@ class TestParseBlocks:
 
     def test_unterminated_search_raises(self):
         text = "<<<<<<< SEARCH\nold\n"
-        with pytest.raises(ParseError, match="missing '======='"):
+        with pytest.raises(ParseError, match="missing '======='") as exc:
             parse_blocks(text)
+        assert exc.value.line == 1
 
     def test_unterminated_replace_raises(self):
         text = "<<<<<<< SEARCH\nold\n=======\nnew\n"
-        with pytest.raises(ParseError, match="missing '>>>>>>> REPLACE'"):
+        with pytest.raises(ParseError, match="missing '>>>>>>> REPLACE'") as exc:
             parse_blocks(text)
+        assert exc.value.line == 1
 
     def test_no_blocks(self):
         assert parse_blocks("just commentary\nno blocks here\n") == []
@@ -177,8 +179,9 @@ class TestParseAiderBlocks:
 
     def test_missing_path_raises(self):
         text = "<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE\n"
-        with pytest.raises(ParseError, match="no preceding file path"):
+        with pytest.raises(ParseError, match="no preceding file path") as exc:
             parse_aider_blocks(text)
+        assert exc.value.line == 1
 
     def test_prose_before_block_is_not_treated_as_path(self):
         text = (

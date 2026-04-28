@@ -77,8 +77,10 @@ def _iter_blocks(text: str, *, require_path: bool):
                 divider = j
                 break
         if divider is None:
+            line = i + 1
             raise ParseError(
-                f"Unterminated SEARCH block at line {i + 1}: missing '======='"
+                f"Unterminated SEARCH block at line {line}: missing '======='",
+                line=line,
             )
 
         # Find replace marker.
@@ -88,15 +90,21 @@ def _iter_blocks(text: str, *, require_path: bool):
                 replace = j
                 break
         if replace is None:
+            line = i + 1
             raise ParseError(
-                f"Unterminated SEARCH block at line {i + 1}: missing '>>>>>>> REPLACE'"
+                f"Unterminated SEARCH block at line {line}: missing '>>>>>>> REPLACE'",
+                line=line,
             )
 
         old = _strip_trailing_eol("".join(lines[i + 1 : divider]))
         new = _strip_trailing_eol("".join(lines[divider + 1 : replace]))
 
         if require_path and path is None:
-            raise ParseError(f"SEARCH block at line {i + 1} has no preceding file path")
+            line = i + 1
+            raise ParseError(
+                f"SEARCH block at line {line} has no preceding file path",
+                line=line,
+            )
 
         yield path, Edit(old=old, new=new)
         i = replace + 1

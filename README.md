@@ -168,10 +168,15 @@ matches and the file is rewritten atomically, or nothing changes.
 - `FileNotFoundError` — path does not exist.
 - `EmptyOldTextError` — an edit has empty `old`.
 - `TextNotFoundError` — `old` is not in the file.
-- `AmbiguousMatchError` — `old` matches more than once. Carries `.occurrences`.
+- `AmbiguousMatchError` — `old` matches more than once. Carries
+  `.occurrences` and `.positions`.
 - `OverlappingEditsError` — two edits target overlapping regions.
 - `NoChangesError` — a write would not change the file, or an individual
   write edit has identical `old` and `new` text.
+
+Semantic exceptions expose stable metadata for tool wrappers where relevant:
+`path`, `edit_index`, `old`, `occurrences`, `positions`, `other_edit_index`,
+and parser `line`.
 
 ### `preview_edits(path, edits, *, encoding="utf-8") -> EditResult`
 
