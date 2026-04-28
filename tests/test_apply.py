@@ -256,6 +256,19 @@ class TestFuzzyMatching:
         # The em-dash on the third line should also be normalized to "-".
         assert read_bytes(path) == b"first FUZZY\nSECOND EXACT\nthird - dash\n"
 
+    def test_fuzzy_match_inserts_new_text_verbatim(self, tmp_file):
+        path = tmp_file(
+            "a.txt",
+            "before\u2014after\nother \u201cquote\u201d\n",
+        )
+        result = apply_edits(
+            path, [Edit("before-after", "replacement \u201cvalue\u201d")]
+        )
+        assert result.used_fuzzy_match is True
+        assert path.read_text(encoding="utf-8") == (
+            'replacement \u201cvalue\u201d\nother "quote"\n'
+        )
+
     def test_fuzzy_flag_false_when_all_exact(self, tmp_file):
         path = tmp_file("a.txt", "ascii only\n")
         result = apply_edits(path, [Edit("ascii", "ASCII")])

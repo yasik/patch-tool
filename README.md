@@ -191,8 +191,8 @@ Full Aider format. Each block must be preceded by a path line.
    else LF.
 4. **Normalize to LF** for matching (handles files written on Windows by an
    LLM that emitted LF-only edits, and vice versa).
-5. **Probe** each edit. If any probe needs fuzzy matching, the *whole file*
-   is rewritten in fuzzy space — see below.
+5. **Probe** each edit. If any probe needs fuzzy matching, the file base is
+   normalized into fuzzy space before matching and applying edits — see below.
 6. **Match** each edit against the (possibly fuzzy) base. Reject if any
    `old` is missing or matches more than once.
 7. **Sort by position** and reject overlapping edits.
@@ -225,13 +225,15 @@ The compromise:
    substitutions (smart quotes → ASCII, exotic dashes → `-`, special
    spaces → regular space, trailing whitespace stripped per line) and try
    again.
-3. If **any** edit needed fuzzy matching, rewrite the **whole file** in
+3. If **any** edit needed fuzzy matching, normalize the **file base** into
    fuzzy space before applying any edits.
 
-The all-or-nothing whole-file fuzzy rewrite is intentional. Mixing exact
-and fuzzy regions in the same file produces surprising diffs (parts of the
-file change normalization, parts don't). Choosing a single space simplifies
-both the algorithm and the resulting diff for the human reviewer.
+The all-or-nothing file-base fuzzy rewrite is intentional. Mixing exact and
+fuzzy regions from the original file produces surprising diffs (parts of the
+file change normalization, parts don't). Replacement text is inserted exactly
+as supplied by the caller; it is not fuzzy-normalized. This matches the
+prior-art behavior while keeping any incidental normalization visible in the
+diff for review.
 
 ### Line ending preservation
 
