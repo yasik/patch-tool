@@ -297,6 +297,7 @@ def apply_edits(
     *,
     dry_run: bool = False,
     encoding: str = "utf-8",
+    cross_process_lock: bool = False,
 ) -> EditResult:
     """Apply one or more search/replace edits to ``path``.
 
@@ -308,6 +309,9 @@ def apply_edits(
             overlap any other edit's match.
         dry_run: If ``True``, computes the diff without writing the file.
         encoding: Text encoding (default ``"utf-8"``).
+        cross_process_lock: If ``True``, also acquire an advisory process-level
+            file lock while applying the edit. The default only serializes
+            threads in the current process.
 
     Returns:
         ``EditResult`` describing the change.
@@ -326,7 +330,7 @@ def apply_edits(
     coerced: list[Edit] = [_coerce_edit(e, i) for i, e in enumerate(edits)]
     target = Path(path).resolve(strict=False)
 
-    with file_mutation_lock(target):
+    with file_mutation_lock(target, cross_process=cross_process_lock):
         with open(target, "rb") as fh:
             raw_bytes = fh.read()
         raw_content = raw_bytes.decode(encoding)
@@ -360,6 +364,13 @@ def preview_edits(
     edits: Sequence[EditLike],
     *,
     encoding: str = "utf-8",
+    cross_process_lock: bool = False,
 ) -> EditResult:
     """Convenience wrapper for ``apply_edits(..., dry_run=True)``."""
-    return apply_edits(path, edits, dry_run=True, encoding=encoding)
+    return apply_edits(
+        path,
+        edits,
+        dry_run=True,
+        encoding=encoding,
+        cross_process_lock=cross_process_lock,
+    )

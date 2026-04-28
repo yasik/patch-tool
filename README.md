@@ -141,7 +141,7 @@ just the `Edit`s and supply the path yourself.
 
 ## API
 
-### `apply_edits(path, edits, *, dry_run=False, encoding="utf-8") -> EditResult`
+### `apply_edits(path, edits, *, dry_run=False, encoding="utf-8", cross_process_lock=False) -> EditResult`
 
 Apply one or more edits to a single file. All-or-nothing: either every edit
 matches and the file is rewritten atomically, or nothing changes.
@@ -153,6 +153,9 @@ matches and the file is rewritten atomically, or nothing changes.
   No-change dry-runs return `diff=""`, `first_changed_line=None`,
   `edits_applied=0`, and `written=False` instead of raising.
 - `encoding` — text encoding. Default `"utf-8"`.
+- `cross_process_lock` — if `True`, also acquire an advisory process-level
+  lock with `fcntl.flock` on supported platforms. Default `False` keeps the
+  hot path to in-process thread serialization only.
 
 **Returns** `EditResult` with:
 - `path: Path` — resolved absolute path.
@@ -178,7 +181,7 @@ Semantic exceptions expose stable metadata for tool wrappers where relevant:
 `path`, `edit_index`, `old`, `occurrences`, `positions`, `other_edit_index`,
 and parser `line`.
 
-### `preview_edits(path, edits, *, encoding="utf-8") -> EditResult`
+### `preview_edits(path, edits, *, encoding="utf-8", cross_process_lock=False) -> EditResult`
 
 Convenience wrapper: `apply_edits(..., dry_run=True)`.
 
@@ -281,9 +284,10 @@ A `threading.Lock` per resolved real path serializes concurrent edits to
 the same file. Edits to different files run in parallel. Symlinks pointing
 to the same file share a lock.
 
-This is in-process only. Multi-process coordination would require
-`fcntl.flock` and is out of scope for the typical LLM agent use case
-(single process, possibly many threads).
+By default this is in-process only, which fits the typical LLM agent use case
+(single process, possibly many threads). Pass `cross_process_lock=True` to also
+use a sibling advisory lock file for process-level serialization on platforms
+with `fcntl.flock`.
 
 ### What we don't do
 

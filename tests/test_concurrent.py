@@ -104,3 +104,21 @@ def test_symlinked_paths_share_lock(tmp_path: Path):
     final = real.read_bytes().decode()
     for i in range(50):
         assert f"OK_{i:02d}" in final
+
+
+def test_cross_process_lock_disabled_by_default(tmp_file):
+    path = tmp_file("a.txt", "x\n")
+
+    apply_edits(path, [Edit("x", "y")])
+
+    assert not (path.parent / ".a.txt.lock").exists()
+
+
+def test_cross_process_lock_uses_sibling_lock_file(tmp_file):
+    pytest.importorskip("fcntl")
+    path = tmp_file("a.txt", "x\n")
+
+    apply_edits(path, [Edit("x", "y")], cross_process_lock=True)
+
+    assert (path.parent / ".a.txt.lock").exists()
+    assert path.read_bytes() == b"y\n"

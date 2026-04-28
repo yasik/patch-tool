@@ -1,4 +1,4 @@
-"""Per-file in-process mutation lock.
+"""Per-file mutation locks.
 
 Two threads editing the *same* file are serialized. Two threads editing
 *different* files run in parallel.
@@ -6,9 +6,8 @@ Two threads editing the *same* file are serialized. Two threads editing
 We key the lock on the resolved real path so two routes to the same file
 (symlink + canonical) get the same lock.
 
-The lock is in-process only. Multi-process coordination would require
-``fcntl.flock`` and is out of scope — an LLM edit tool typically runs as a
-single process.
+The default lock is in-process only. Callers can opt into an advisory
+cross-process ``fcntl.flock`` lock when they need process-level coordination.
 """
 
 from __future__ import annotations
@@ -17,6 +16,11 @@ import threading
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 
 _locks: dict[str, threading.Lock] = {}
 _locks_guard = threading.Lock()
@@ -29,11 +33,33 @@ def _key(path: Path) -> str:
         return str(path.absolute())
 
 
+def _lock_file_path(path: Path) -> Path:
+    return path.parent / f".{path.name}.lock"
+
+
 @contextmanager
-def file_mutation_lock(path: Path) -> Iterator[None]:
+def _cross_process_lock(path: Path) -> Iterator[None]:
+    if fcntl is None:
+        raise RuntimeError("cross_process_lock requires fcntl support")
+
+    lock_path = _lock_file_path(path)
+    with open(lock_path, "a", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+@contextmanager
+def file_mutation_lock(path: Path, *, cross_process: bool = False) -> Iterator[None]:
     """Acquire the per-file lock for the duration of the block."""
     key = _key(path)
     with _locks_guard:
         lock = _locks.setdefault(key, threading.Lock())
     with lock:
-        yield
+        if cross_process:
+            with _cross_process_lock(path):
+                yield
+        else:
+            yield
