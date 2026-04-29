@@ -2,14 +2,14 @@
 
 Two entry points:
 
-* :func:`parse_search_replace_blocks` extracts bare
+* :func:`parse_blocks` extracts bare
   ``<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE`` blocks and returns only
   edits. Use this when the tool wrapper already received the target path as a
   structured argument and should call ``apply_edits(path, edits)`` itself.
 
-* :func:`parse_path_search_replace_blocks` parses path-prefixed blocks and
-  returns ``path -> [Edit, ...]``. Use this only when the model output is a
-  free-form multi-file text blob whose path lines should drive dispatch.
+* :func:`parse_path_blocks` parses path-prefixed blocks and returns
+  ``path -> [Edit, ...]``. Use this only when the model output is a free-form
+  multi-file text blob whose path lines should drive dispatch.
 
 Both parsers tolerate:
 
@@ -40,7 +40,7 @@ def _strip_trailing_eol(text: str) -> str:
     return normalized[:-1] if normalized.endswith("\n") else normalized
 
 
-def parse_search_replace_blocks(text: str) -> list[Edit]:
+def parse_blocks(text: str) -> list[Edit]:
     """Parse bare SEARCH/REPLACE blocks and ignore path lines.
 
     Use this for structured LLM tools where the wrapper already has an explicit
@@ -50,7 +50,7 @@ def parse_search_replace_blocks(text: str) -> list[Edit]:
     return [edit for _, edit in _iter_blocks(text, require_path=False)]
 
 
-def parse_path_search_replace_blocks(text: str) -> dict[str, list[Edit]]:
+def parse_path_blocks(text: str) -> dict[str, list[Edit]]:
     """Parse path-prefixed SEARCH/REPLACE blocks.
 
     Use this for free-form multi-file model output where the text itself names

@@ -96,17 +96,17 @@ assert not result.written       # but file is untouched
 There are two parser entry points because wrappers get paths in two different
 ways:
 
-- Use `parse_search_replace_blocks(text)` when the LLM tool call already has a
+- Use `parse_blocks(text)` when the LLM tool call already has a
   structured `path` argument. The wrapper owns path dispatch and should pass the
   parsed edits to `apply_edits(path, edits)`.
-- Use `parse_path_search_replace_blocks(text)` only when the model output is a
+- Use `parse_path_blocks(text)` only when the model output is a
   free-form text blob that includes path lines and may edit multiple files.
   The parser owns path dispatch and returns `path -> edits`.
 
 For free-form path-prefixed text:
 
 ```python
-from patch_tool import parse_path_search_replace_blocks, apply_edits
+from patch_tool import parse_path_blocks, apply_edits
 
 blob = """
 src/foo.py
@@ -119,7 +119,7 @@ def greet(name: str):
 >>>>>>> REPLACE
 """
 
-for path, edits in parse_path_search_replace_blocks(blob).items():
+for path, edits in parse_path_blocks(blob).items():
     apply_edits(path, edits)
 ```
 
@@ -146,10 +146,10 @@ The grammar is:
 For structured tool wrappers, omit the path line and parse only edits:
 
 ```python
-from patch_tool import parse_search_replace_blocks, apply_edits
+from patch_tool import parse_blocks, apply_edits
 
 def tool_wrapper(path: str, edit_text: str) -> None:
-    edits = parse_search_replace_blocks(edit_text)
+    edits = parse_blocks(edit_text)
     apply_edits(path, edits)
 ```
 
@@ -201,12 +201,12 @@ and parser `line`.
 
 Convenience wrapper: `apply_edits(..., dry_run=True)`.
 
-### `parse_search_replace_blocks(text: str) -> list[Edit]`
+### `parse_blocks(text: str) -> list[Edit]`
 
 Extract bare SEARCH/REPLACE blocks. Use when the caller already has the target
 path from structured tool input. Path lines are ignored.
 
-### `parse_path_search_replace_blocks(text: str) -> dict[str, list[Edit]]`
+### `parse_path_blocks(text: str) -> dict[str, list[Edit]]`
 
 Extract path-prefixed SEARCH/REPLACE blocks. Use only when file paths are part
 of the model text. Each block must be preceded by a path line.
