@@ -1,6 +1,6 @@
 """Core edit application logic.
 
-Algorithm (mirrors pi-mono / Aider semantics):
+Algorithm (mirrors prior-art search/replace editing semantics):
 
 1. Read the file as UTF-8.
 2. Strip the UTF-8 BOM if present; remember it for restoration.

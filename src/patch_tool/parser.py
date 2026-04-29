@@ -1,12 +1,15 @@
-"""Parser for Aider-style search/replace blocks.
+"""Parser for search/replace edit blocks.
 
 Two entry points:
 
-* :func:`parse_blocks` — extracts bare ``<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE``
-  blocks. File paths are ignored; you supply the path separately.
+* :func:`parse_search_replace_blocks` extracts bare
+  ``<<<<<<< SEARCH ... ======= ... >>>>>>> REPLACE`` blocks and returns only
+  edits. Use this when the tool wrapper already received the target path as a
+  structured argument and should call ``apply_edits(path, edits)`` itself.
 
-* :func:`parse_aider_blocks` — full Aider format, where each block is preceded
-  by a path on its own line. Returns a mapping of path → ``[Edit, ...]``.
+* :func:`parse_path_search_replace_blocks` parses path-prefixed blocks and
+  returns ``path -> [Edit, ...]``. Use this only when the model output is a
+  free-form multi-file text blob whose path lines should drive dispatch.
 
 Both parsers tolerate:
 
@@ -14,9 +17,9 @@ Both parsers tolerate:
   the lines immediately around a block.
 * Arbitrary commentary between blocks.
 * Trailing whitespace on marker lines.
-* The exact 7-char marker form ``<<<<<<<`` / ``=======`` / ``>>>>>>>`` (Aider's).
+* The exact 7-char marker form ``<<<<<<<`` / ``=======`` / ``>>>>>>>``.
 
-We refuse to escape markers inside the SEARCH/REPLACE bodies — if your code
+It refuses to escape markers inside the SEARCH/REPLACE bodies — if your code
 genuinely contains those strings, use the structured ``Edit`` API instead.
 """
 
@@ -37,15 +40,22 @@ def _strip_trailing_eol(text: str) -> str:
     return normalized[:-1] if normalized.endswith("\n") else normalized
 
 
-def parse_blocks(text: str) -> list[Edit]:
-    """Parse one or more bare SEARCH/REPLACE blocks. Paths are ignored."""
+def parse_search_replace_blocks(text: str) -> list[Edit]:
+    """Parse bare SEARCH/REPLACE blocks and ignore path lines.
+
+    Use this for structured LLM tools where the wrapper already has an explicit
+    file path argument. The parsed edits should be passed to
+    ``apply_edits(path, edits)`` using that wrapper-owned path.
+    """
     return [edit for _, edit in _iter_blocks(text, require_path=False)]
 
 
-def parse_aider_blocks(text: str) -> dict[str, list[Edit]]:
-    """Parse Aider-style blocks where each block is preceded by a file path.
+def parse_path_search_replace_blocks(text: str) -> dict[str, list[Edit]]:
+    """Parse path-prefixed SEARCH/REPLACE blocks.
 
-    Multiple blocks targeting the same path are grouped in order.
+    Use this for free-form multi-file model output where the text itself names
+    the files to edit. Each block must be preceded by a path line; multiple
+    blocks targeting the same path are grouped in order.
 
     Raises:
         ParseError: if any block is not preceded by a path.

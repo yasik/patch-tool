@@ -91,13 +91,22 @@ assert not result.written       # but file is untouched
 
 ---
 
-## The Aider-style block format
+## Search/replace block formats
 
-If you want the LLM to emit edits as text (instead of as a structured
-function call), you can use the parser:
+There are two parser entry points because wrappers get paths in two different
+ways:
+
+- Use `parse_search_replace_blocks(text)` when the LLM tool call already has a
+  structured `path` argument. The wrapper owns path dispatch and should pass the
+  parsed edits to `apply_edits(path, edits)`.
+- Use `parse_path_search_replace_blocks(text)` only when the model output is a
+  free-form text blob that includes path lines and may edit multiple files.
+  The parser owns path dispatch and returns `path -> edits`.
+
+For free-form path-prefixed text:
 
 ```python
-from patch_tool import parse_aider_blocks, apply_edits
+from patch_tool import parse_path_search_replace_blocks, apply_edits
 
 blob = """
 src/foo.py
@@ -110,7 +119,7 @@ def greet(name: str):
 >>>>>>> REPLACE
 """
 
-for path, edits in parse_aider_blocks(blob).items():
+for path, edits in parse_path_search_replace_blocks(blob).items():
     apply_edits(path, edits)
 ```
 
@@ -132,10 +141,17 @@ The grammar is:
   filename.
 - Multiple blocks targeting the same path are grouped.
 - Trailing whitespace on marker lines is ignored.
-- The markers are exactly seven `<`, `=`, or `>` characters — same as Aider.
+- The markers are exactly seven `<`, `=`, or `>` characters.
 
-If you don't want path-driven dispatch, use `parse_blocks(text)` to extract
-just the `Edit`s and supply the path yourself.
+For structured tool wrappers, omit the path line and parse only edits:
+
+```python
+from patch_tool import parse_search_replace_blocks, apply_edits
+
+def tool_wrapper(path: str, edit_text: str) -> None:
+    edits = parse_search_replace_blocks(edit_text)
+    apply_edits(path, edits)
+```
 
 ---
 
@@ -185,13 +201,15 @@ and parser `line`.
 
 Convenience wrapper: `apply_edits(..., dry_run=True)`.
 
-### `parse_blocks(text: str) -> list[Edit]`
+### `parse_search_replace_blocks(text: str) -> list[Edit]`
 
-Extract bare SEARCH/REPLACE blocks. Path lines are ignored.
+Extract bare SEARCH/REPLACE blocks. Use when the caller already has the target
+path from structured tool input. Path lines are ignored.
 
-### `parse_aider_blocks(text: str) -> dict[str, list[Edit]]`
+### `parse_path_search_replace_blocks(text: str) -> dict[str, list[Edit]]`
 
-Full Aider format. Each block must be preceded by a path line.
+Extract path-prefixed SEARCH/REPLACE blocks. Use only when file paths are part
+of the model text. Each block must be preceded by a path line.
 
 ---
 
@@ -355,48 +373,3 @@ uv run pytest
 # With coverage
 uv run pytest --cov=patch_tool --cov-report=term-missing
 ```
-
-The test suite covers:
-
-- Single and multi-edit application
-- Line ending preservation (LF, CRLF, mixed, none)
-- BOM handling
-- Fuzzy matching for smart quotes, dashes, NBSP, NFKC
-- All error conditions
-- Atomic write properties (mode preservation, no temp files left behind)
-- Path handling (str, PathLike, relative, resolved)
-- Unified diff format
-- Aider block parsing (with and without paths)
-- Concurrent edits (same file serialized, different files parallel,
-  symlinks share locks)
-
----
-
-## Project layout
-
-```
-src/patch_tool/
-├── __init__.py          # public API surface
-├── _types.py            # Edit, EditResult dataclasses
-├── _file_lock.py        # per-file threading.Lock
-├── apply.py             # core algorithm + atomic write
-├── _diff.py             # unified diff with line numbers
-├── errors.py            # typed exceptions
-├── _matching.py         # exact + fuzzy text search
-├── _normalization.py    # BOM, line endings, fuzzy normalization
-└── parser.py            # SEARCH/REPLACE block parser
-
-tests/
-├── test_apply.py        # end-to-end edit application
-├── test_concurrent.py   # threading and locking
-├── test_diff.py         # diff format
-├── test_matching.py     # match algorithm
-├── test_normalization.py # text normalization
-└── test_parser.py       # block parser
-```
-
----
-
-## License
-
-Use it, fork it, ship it.

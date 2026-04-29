@@ -22,15 +22,15 @@ from .errors import (
     PatchError,
     TextNotFoundError,
 )
-from .parser import parse_aider_blocks, parse_blocks
+from .parser import parse_path_search_replace_blocks, parse_search_replace_blocks
 
 __all__ = [
     "Edit",
     "EditResult",
     "apply_edits",
     "preview_edits",
-    "parse_blocks",
-    "parse_aider_blocks",
+    "parse_search_replace_blocks",
+    "parse_path_search_replace_blocks",
     "PatchError",
     "EmptyOldTextError",
     "TextNotFoundError",
