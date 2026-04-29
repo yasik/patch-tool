@@ -185,7 +185,7 @@ Convenience wrapper: `apply_edits(..., dry_run=True)`.
 Extract bare SEARCH/REPLACE blocks. Use when the caller already has the target
 path from structured tool input. Path lines are ignored.
 
-### `parse_path_blocks(text: str) -> dict[str, list[Edit]]`
+`parse_path_blocks(text: str) -> dict[str, list[Edit]]`
 
 Extract path-prefixed SEARCH/REPLACE blocks. Use only when file paths are part
 of the model text. Each block must be preceded by a path line.
