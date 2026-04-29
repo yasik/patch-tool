@@ -1,4 +1,4 @@
-.PHONY: init sync sync-upgrade format lint lint-python lint-static tests tree release
+.PHONY: init sync sync-upgrade format lint lint-python lint-static tests tree
 
 init:
 	uv sync --all-extras

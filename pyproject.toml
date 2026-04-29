@@ -1,5 +1,5 @@
 [project]
-name = "patch-tool"
+name = "llm-patch-tool"
 version = "0.1.0"
 description = "Robust search/replace file editing for LLM-driven code changes"
 readme = "README.md"

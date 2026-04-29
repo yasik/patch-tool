@@ -45,10 +45,10 @@ lower in practice.
 
 ```bash
 # With uv (recommended)
-uv add patch-tool
+uv add llm-patch-tool
 
 # Or pip
-pip install patch-tool
+pip install llm-patch-tool
 ```
 
 Requires Python 3.12+.
