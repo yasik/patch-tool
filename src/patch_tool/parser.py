@@ -41,21 +41,48 @@ def _strip_trailing_eol(text: str) -> str:
 
 
 def parse_blocks(text: str) -> list[Edit]:
-    """Parse bare SEARCH/REPLACE blocks and ignore path lines.
+    r"""Parse bare SEARCH/REPLACE blocks and ignore path lines.
 
     Use this for structured LLM tools where the wrapper already has an explicit
     file path argument. The parsed edits should be passed to
     ``apply_edits(path, edits)`` using that wrapper-owned path.
+
+    Example:
+        ``text`` may contain one or more bare blocks:
+
+        >>> text = (
+        ...     "<<<<<<< SEARCH\\n"
+        ...     "old text\\n"
+        ...     "=======\\n"
+        ...     "new text\\n"
+        ...     ">>>>>>> REPLACE\\n"
+        ... )
+        >>> parse_blocks(text)
+        [Edit(old='old text', new='new text')]
     """
     return [edit for _, edit in _iter_blocks(text, require_path=False)]
 
 
 def parse_path_blocks(text: str) -> dict[str, list[Edit]]:
-    """Parse path-prefixed SEARCH/REPLACE blocks.
+    r"""Parse path-prefixed SEARCH/REPLACE blocks.
 
     Use this for free-form multi-file model output where the text itself names
     the files to edit. Each block must be preceded by a path line; multiple
     blocks targeting the same path are grouped in order.
+
+    Example:
+        ``text`` must include a path line before each block:
+
+        >>> text = (
+        ...     "src/foo.py\\n"
+        ...     "<<<<<<< SEARCH\\n"
+        ...     "old text\\n"
+        ...     "=======\\n"
+        ...     "new text\\n"
+        ...     ">>>>>>> REPLACE\\n"
+        ... )
+        >>> parse_path_blocks(text)
+        {'src/foo.py': [Edit(old='old text', new='new text')]}
 
     Raises:
         ParseError: if any block is not preceded by a path.
