@@ -157,31 +157,10 @@ def tool_wrapper(path: str, edit_text: str) -> None:
 
 ## API
 
-### `apply_edits(path, edits, *, dry_run=False, encoding="utf-8", cross_process_lock=False) -> EditResult`
+`apply_edits(path, edits, *, dry_run=False, encoding="utf-8", cross_process_lock=False) -> EditResult`
 
 Apply one or more edits to a single file. All-or-nothing: either every edit
 matches and the file is rewritten atomically, or nothing changes.
-
-**Arguments:**
-- `path` — file to edit (str or PathLike). Must exist.
-- `edits` — sequence of `Edit`, `(old, new)` tuples, or `{"old", "new"}` dicts.
-- `dry_run` — if `True`, computes the diff without writing.
-  No-change dry-runs return `diff=""`, `first_changed_line=None`,
-  `edits_applied=0`, and `written=False` instead of raising.
-- `encoding` — text encoding. Default `"utf-8"`.
-- `cross_process_lock` — if `True`, also acquire an advisory process-level
-  lock with `fcntl.flock` on supported platforms. Default `False` keeps the
-  hot path to in-process thread serialization only.
-
-**Returns** `EditResult` with:
-- `path: Path` — resolved absolute path.
-- `diff: str` — unified-style diff with line numbers and 4 lines of context.
-- `first_changed_line: int | None` — 1-indexed line number of the first
-  change in the new file (handy for editor navigation).
-- `edits_applied: int` — number of edits matched and applied.
-- `used_fuzzy_match: bool` — `True` if at least one edit required Unicode
-  normalization (see *Fuzzy matching* below).
-- `written: bool` — `False` for `dry_run`.
 
 **Raises:**
 - `FileNotFoundError` — path does not exist.
@@ -197,11 +176,11 @@ Semantic exceptions expose stable metadata for tool wrappers where relevant:
 `path`, `edit_index`, `old`, `occurrences`, `positions`, `other_edit_index`,
 and parser `line`.
 
-### `preview_edits(path, edits, *, encoding="utf-8", cross_process_lock=False) -> EditResult`
+`preview_edits(path, edits, *, encoding="utf-8", cross_process_lock=False) -> EditResult`
 
 Convenience wrapper: `apply_edits(..., dry_run=True)`.
 
-### `parse_blocks(text: str) -> list[Edit]`
+`parse_blocks(text: str) -> list[Edit]`
 
 Extract bare SEARCH/REPLACE blocks. Use when the caller already has the target
 path from structured tool input. Path lines are ignored.
@@ -307,7 +286,7 @@ By default this is in-process only, which fits the typical LLM agent use case
 use a sibling advisory lock file for process-level serialization on platforms
 with `fcntl.flock`.
 
-### What we don't do
+### What is not supported
 
 - **No diff/patch parsing.** This is a search/replace tool. If you want
   unified-diff input, parse it externally and convert to `Edit` objects.
