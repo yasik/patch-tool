@@ -1,6 +1,6 @@
 [project]
 name = "llm-patch-tool"
-version = "0.1.0"
+version = "0.2.0"
 description = "Robust search/replace file editing for LLM-driven code changes"
 readme = "README.md"
 requires-python = ">=3.12"

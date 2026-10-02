@@ -34,7 +34,7 @@ from ._normalization import (
     restore_line_endings,
     strip_bom,
 )
-from ._types import Edit, EditResult
+from ._types import Edit, EditResult, TextEditResult
 from .errors import (
     AmbiguousMatchError,
     EmptyOldTextError,
@@ -291,6 +291,36 @@ def _apply_in_memory(
     return diff_base, new_content, used_fuzzy, len(normalized)
 
 
+def apply_edits_to_text(
+    content: str,
+    edits: Sequence[EditLike],
+    *,
+    path_hint: str = "<text>",
+    allow_no_changes: bool = False,
+) -> TextEditResult:
+    """Apply existing edit rules to text without reading or writing files.
+
+    Preserve the BOM and dominant line ending. `path_hint` labels errors only;
+    it is never resolved or opened. Set `allow_no_changes` for preview behavior.
+    """
+    if not edits:
+        raise ValueError("edits must contain at least one entry")
+    coerced = [_coerce_edit(edit, index) for index, edit in enumerate(edits)]
+    bom, body = strip_bom(content)
+    line_ending = detect_line_ending(body)
+    diff_base, new_lf, used_fuzzy, applied = _apply_in_memory(
+        normalize_to_lf(body), coerced, path_hint, allow_no_changes=allow_no_changes
+    )
+    diff_text, first_changed = generate_diff(diff_base, new_lf)
+    return TextEditResult(
+        content=bom + restore_line_endings(new_lf, line_ending),
+        diff=diff_text,
+        first_changed_line=first_changed,
+        edits_applied=applied,
+        used_fuzzy_match=used_fuzzy,
+    )
+
+
 def apply_edits(
     path: str | os.PathLike[str],
     edits: Sequence[EditLike],
@@ -335,26 +365,18 @@ def apply_edits(
             raw_bytes = fh.read()
         raw_content = raw_bytes.decode(encoding)
 
-        bom, body = strip_bom(raw_content)
-        line_ending = detect_line_ending(body)
-        lf_body = normalize_to_lf(body)
-
-        diff_base, new_lf, used_fuzzy, applied = _apply_in_memory(
-            lf_body, coerced, str(target), allow_no_changes=dry_run
+        result = apply_edits_to_text(
+            raw_content, coerced, path_hint=str(target), allow_no_changes=dry_run
         )
-
-        diff_text, first_changed = generate_diff(diff_base, new_lf)
-
         if not dry_run:
-            final = bom + restore_line_endings(new_lf, line_ending)
-            _atomic_write(target, final, encoding=encoding)
+            _atomic_write(target, result.content, encoding=encoding)
 
     return EditResult(
         path=target,
-        diff=diff_text,
-        first_changed_line=first_changed,
-        edits_applied=applied,
-        used_fuzzy_match=used_fuzzy,
+        diff=result.diff,
+        first_changed_line=result.first_changed_line,
+        edits_applied=result.edits_applied,
+        used_fuzzy_match=result.used_fuzzy_match,
         written=not dry_run,
     )
 

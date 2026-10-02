@@ -352,3 +352,24 @@ uv run pytest
 # With coverage
 uv run pytest --cov=patch_tool --cov-report=term-missing
 ```
+
+### Edit content supplied by an application
+
+Use `apply_edits_to_text` when the application owns file access:
+
+```python
+from patch_tool import Edit, apply_edits_to_text
+
+result = apply_edits_to_text(
+    "old\r\n",
+    [Edit(old="old", new="new")],
+    path_hint="tenant/notes.txt",
+)
+assert result.content == "new\r\n"
+```
+
+This uses the same matching, overlap checks, BOM handling, line endings, and
+errors as `apply_edits`. It performs no file I/O. `path_hint` labels errors;
+it is not resolved or opened. The result includes the edited content, diff,
+first changed line, edit count, and fuzzy-match flag. Set `allow_no_changes=True`
+for preview behavior. The caller owns encoding, writing, and concurrency control.

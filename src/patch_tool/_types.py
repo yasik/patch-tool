@@ -43,3 +43,14 @@ class EditResult:
 
     written: bool
     """``True`` if the file was written. ``False`` for dry-runs."""
+
+
+@dataclass(frozen=True, slots=True)
+class TextEditResult:
+    """Edited text and diff metadata, with no file I/O performed."""
+
+    content: str
+    diff: str
+    first_changed_line: int | None
+    edits_applied: int
+    used_fuzzy_match: bool

@@ -11,8 +11,8 @@ Quick start::
     print(result.diff)
 """
 
-from ._types import Edit, EditResult
-from .apply import apply_edits, preview_edits
+from ._types import Edit, EditResult, TextEditResult
+from .apply import apply_edits, apply_edits_to_text, preview_edits
 from .errors import (
     AmbiguousMatchError,
     EmptyOldTextError,
@@ -27,6 +27,8 @@ from .parser import parse_blocks, parse_path_blocks
 __all__ = [
     "Edit",
     "EditResult",
+    "TextEditResult",
+    "apply_edits_to_text",
     "apply_edits",
     "preview_edits",
     "parse_blocks",
